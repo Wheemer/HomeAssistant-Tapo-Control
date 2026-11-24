@@ -747,12 +747,13 @@ class FlowHandler(ConfigFlow):
             "[ADD DEVICE][%s] Showing config flow for cloud password.",
             self.tapoHost,
         )
-        data_schema = vol.Schema(
-            {
+        fields = {vol.Required(CLOUD_PASSWORD): str}
+        if errors and str(self.tapoControlPort) != "443":
+            fields = {
                 vol.Required(CONF_USERNAME, default=cloud_username): str,
-                vol.Required(CLOUD_PASSWORD): str,
+                **fields,
             }
-        )
+        data_schema = vol.Schema(fields)
         return self.async_show_form(
             step_id="auth_cloud_password",
             data_schema=data_schema,
