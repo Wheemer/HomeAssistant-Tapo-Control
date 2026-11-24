@@ -8,7 +8,7 @@
   ],
   "version": "7.3.11",
   "requirements": [
-    "pytapo==3.4.40",
+    "pytapo @ https://codeload.github.com/Wheemer/pytapo/zip/fc03fa11787a26a7c8b63d197df077065106c11e",
     "python-kasa[speedups]>=0.10.2"
   ],
   "dependencies": [
