@@ -716,11 +716,15 @@ class FlowHandler(ConfigFlow):
                     errors["base"] = "connection_failed"
                     LOGGER.error(e)
                 elif str(e) == "Invalid authentication data":
-                    LOGGER.debug(
-                        "[ADD DEVICE][%s] Invalid cloud password provided.",
+                    LOGGER.warning(
+                        "[ADD DEVICE][%s:%s] Local control authentication rejected "
+                        "while validating the cloud-password fallback; "
+                        "username_is_admin=%s; no cloud login was attempted.",
                         self.tapoHost,
+                        self.tapoControlPort,
+                        cloud_username == "admin",
                     )
-                    errors["base"] = "invalid_auth_cloud"
+                    errors["base"] = "local_control_auth_rejected"
                 elif "Temporary Suspension" in str(e):
                     LOGGER.debug(
                         "[ADD DEVICE][%s] Temporary suspension.",
@@ -734,25 +738,12 @@ class FlowHandler(ConfigFlow):
             "[ADD DEVICE][%s] Showing config flow for cloud password.",
             self.tapoHost,
         )
-        if errors == {} or str(self.tapoControlPort) == "443":
-            data_schema = vol.Schema(
-                {
-                    vol.Required(
-                        CLOUD_PASSWORD, description={"suggested_value": cloud_password}
-                    ): str,
-                }
-            )
-        else:
-            data_schema = vol.Schema(
-                {
-                    vol.Required(
-                        CONF_USERNAME, description={"suggested_value": cloud_username}
-                    ): str,
-                    vol.Required(
-                        CLOUD_PASSWORD, description={"suggested_value": cloud_password}
-                    ): str,
-                }
-            )
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME, default=cloud_username): str,
+                vol.Required(CLOUD_PASSWORD): str,
+            }
+        )
         return self.async_show_form(
             step_id="auth_cloud_password",
             data_schema=data_schema,
@@ -1193,8 +1184,11 @@ class FlowHandler(ConfigFlow):
                     except Exception as e:
                         if str(e) == "Invalid authentication data":
                             LOGGER.debug(
-                                "[ADD DEVICE][%s] Camera Account does not work for control, requesting cloud password.",
+                                "[ADD DEVICE][%s:%s] Local control rejected the Camera Account; "
+                                "offering cloud-password fallback (RTSP verification skipped=%s).",
                                 host,
+                                controlPort,
+                                skip_rtsp,
                             )
                             return await self.async_step_auth_cloud_password()
                         elif "Temporary Suspension" in str(e):
