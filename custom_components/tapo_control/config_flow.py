@@ -101,6 +101,12 @@ LIVE_VIEW_MODE_SELECTOR = selector(
 )
 
 
+def _device_auth_code(error):
+    """Return only a numeric device error code, without exception payloads."""
+    code = getattr(error.__cause__, "code", None)
+    return code if type(code) is int else None
+
+
 @HANDLERS.register(DOMAIN)
 class FlowHandler(ConfigFlow):
     """Handle a config flow."""
@@ -719,10 +725,13 @@ class FlowHandler(ConfigFlow):
                     LOGGER.warning(
                         "[ADD DEVICE][%s:%s] Local control authentication rejected "
                         "while validating the cloud-password fallback; "
-                        "username_is_admin=%s; no cloud login was attempted.",
+                        "username_is_admin=%s; cause=%s; device_code=%s; "
+                        "no cloud login was attempted.",
                         self.tapoHost,
                         self.tapoControlPort,
                         cloud_username == "admin",
+                        type(e.__cause__).__name__,
+                        _device_auth_code(e),
                     )
                     errors["base"] = "local_control_auth_rejected"
                 elif "Temporary Suspension" in str(e):
@@ -1035,11 +1044,15 @@ class FlowHandler(ConfigFlow):
                         errors["base"] = "connection_failed"
                         LOGGER.error(e)
                     elif str(e) == "Invalid authentication data":
-                        LOGGER.debug(
-                            "[ADD DEVICE][%s] Invalid cloud password provided.",
+                        LOGGER.warning(
+                            "[ADD DEVICE][%s:%s] Local control authentication rejected "
+                            "during optional cloud-password check; cause=%s; device_code=%s.",
                             self.tapoHost,
+                            self.tapoControlPort,
+                            type(e.__cause__).__name__,
+                            _device_auth_code(e),
                         )
-                        errors["base"] = "invalid_auth_cloud"
+                        errors["base"] = "local_control_auth_rejected"
                     elif "Temporary Suspension" in str(e):
                         LOGGER.debug(
                             "[ADD DEVICE][%s] Temporary suspension.",
